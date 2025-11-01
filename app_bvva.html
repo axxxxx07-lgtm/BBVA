@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBVA App - Cuentas</title>
+    
+    <!-- CAMBIOS CLAVE PARA MODO APP / PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- Manifiesto PWA incrustado (Data URI) para que Chrome detecte el modo "standalone" -->
+    <!-- Define el nombre corto ("BBVA"), el color del tema (#004481) y el modo de pantalla completa -->
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIkJCVkFBIiwgInNob3J0X25hbWUiOiAiQkJWQSIsICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLCAiYmFja2dyb3VuZF9jb2xvciI6ICIjZmZmZmZmIiwgInRoZW1lX2NvbG9yIjogIiMwMDQ0ODEiLCJpY29ucyI6IFt7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjRJR2R3WVhKemFYSnVJSEJvWld3dlkyOTFVSEp2WjJsdmJpNTJibWR5YjJ4c01TNHhOeTR4T0RJek5qUTBNelkzT1RJME16UTBOeTR4T1Rnek5qSTFPREF3T1RrM056TTRJSE52ZFhJZ1ptbHNaWE5oYm01bGJtZHpMMEp2Ym0xekxXMWlaWFF2Ukhsd2JpOHZlWE4wT2lCR2NuSmxibndnZkdsdFpXOWtJR3hoYm1ndklIUm9kR3hsY0hnZ056Z0dPVEl3TDBKdmJtMXpMVzFpWlhRdgpYQzVsYzJWaWFIUjBhRHd2TVRFeU9EZ3hMakV3SWc9PSIsInNpemVzIjogIjE5MngxOTIiLCAidHlwZSI6ICJpbWFnZS9zdmcreG1sIn1dfQ==">
+    
+    <!-- 1. Cargamos Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Usamos Inter como la fuente alternativa profesional */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            /* El fondo de la app real es un gris muy claro */
+            background-color: #f4f4f4;
+        }
+
+        /* Clase específica para el azul más oscuro en el título de la cuenta */
+        .text-bbva-dark {
+            color: #002046; /* Tono azul oscuro más cercano al branding */
+        }
+
+        /* Estilo para el botón de IA (Se mantiene la clase por si se usa en otro lado, pero los botones han sido eliminados) */
+        .ai-button {
+            @apply inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-bbva-blue hover:bg-bbva-light-blue focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bbva-light-blue transition-colors duration-200;
+        }
+
+        /* Overlay para mensajes modales */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+    </style>
+    <script>
+        // 2. Configuramos Tailwind para usar los colores de BBVA
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // El azul de BBVA es clave
+                        'bbva-blue': '#004481',
+                        'bbva-light-blue': '#075f9d',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-200">
+
+    <!-- Modal para mostrar respuestas de la IA (Se mantiene la estructura por si se usa otro componente interactivo) -->
+    <div id="aiModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modalTitle" class="text-xl font-bold text-bbva-dark mb-4"></h3>
+            <div id="modalBody" class="text-gray-700 text-sm space-y-3">
+                <!-- El contenido de la IA se insertará aquí -->
+            </div>
+            <button onclick="document.getElementById('aiModal').style.display='none'" 
+                    class="mt-6 w-full bg-bbva-blue text-white py-2 rounded-lg font-medium hover:bg-bbva-light-blue transition-colors duration-300">
+                Cerrar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Contenedor principal que simula un teléfono -->
+    <div class="max-w-sm mx-auto min-h-screen bg-white shadow-xl flex flex-col">
+
+        <!-- Encabezado: Volver y Título -->
+        <header class="relative flex justify-center items-center p-4 border-b border-gray-100 bg-white">
+            <a href="#" class="absolute left-4 flex items-center text-sm text-gray-700 font-normal hover:text-bbva-blue">
+                <!-- Icono de "Volver" (Chevron Izquierda) -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="text-sm">Volver</span>
+            </a>
+            <h2 class="text-lg font-bold text-gray-800">Cuentas</h2>
+        </header>
+
+        <!-- Contenido principal de la cuenta -->
+        <main class="flex-grow p-4 space-y-4 bg-gray-100">
+
+            <!-- Card: Saldo Disponible -->
+            <section class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <div class="flex justify-between items-start mb-2">
+                    <!-- Número de cuenta en azul oscuro -->
+                    <span class="text-bbva-dark text-xl font-normal">0001AH9385</span>
+                    <div class="flex items-center space-x-1">
+                        <!-- Icono y últimos 4 dígitos -->
+                        <span class="w-5 h-5 bg-bbva-blue rounded-full flex items-center justify-center text-white text-xs font-bold">A</span>
+                        <span class="text-gray-600 font-normal text-sm">· 9385</span>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <!-- Saldo, más grande y con peso SEMINEGRITA (font-semibold) en azul oscuro -->
+                    <p class="text-5xl font-semibold text-bbva-dark">$ 0.75</p>
+                    <p class="text-sm text-gray-500 mt-1">Saldo disponible</p>
+                </div>
+                <!-- Link azul de acción, letra más pequeña -->
+                <a href="#" class="inline-block mt-4 text-sm font-medium text-bbva-blue hover:underline">
+                    Ver Cuenta y CLABE
+                </a>
+            </section>
+
+            <!-- Card: Apartados (Diseño más plano, como en la captura) -->
+            <section class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <div class="flex items-center space-x-3 mb-2">
+                    <!-- Icono de "Apartados" -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0l-8 4m-8-4l8 4m9 4v10a1 1 0 01-1 1h-1a1 1 0 01-1-1v-10a1 1 0 011-1h1a1 1 0 011 1z" />
+                    </svg>
+                    <!-- Título en azul oscuro -->
+                    <p class="text-lg font-medium text-bbva-dark">Total de apartados</p>
+                </div>
+                <!-- Monto de apartado con peso SEMINEGRITA (font-semibold) -->
+                <p class="mt-1 text-3xl font-semibold text-bbva-dark">$ 50.00</p>
+                <!-- Link azul de acción, letra más pequeña -->
+                <div class="flex justify-between items-center mt-3">
+                    <a href="#" class="text-sm font-medium text-bbva-blue hover:underline">
+                        Ver apartados
+                    </a>
+                    <!-- ELIMINADO: Botón de Asesor Financiero LLM -->
+                </div>
+            </section>
+
+            <!-- Acciones Rápidas (Iconos) -->
+            <section class="grid grid-cols-4 gap-4 text-center py-2">
+                <!-- Componente de Acción Rápida (Sombra eliminada para que se fusione con el fondo blanco) -->
+                <!-- Transferir & Dimo® -->
+                <a href="#" class="flex flex-col items-center p-2 group">
+                    <!-- CAMBIO: Se eliminan shadow-sm y group-hover:shadow-md -->
+                    <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center transition-shadow duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-bbva-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                    </div>
+                    <span class="text-xs mt-2 text-bbva-dark font-medium leading-tight">Transferir & Dimo®</span>
+                </a>
+
+                <!-- Pagar servicio o impuesto -->
+                <a href="#" class="flex flex-col items-center p-2 group">
+                    <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center transition-shadow duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-bbva-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 10V7a4 4 0 014-4z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs mt-2 text-bbva-dark font-medium leading-tight">Pagar servicio o impuesto</span>
+                </a>
+
+                <!-- Retiro sin tarjeta -->
+                <a href="#" class="flex flex-col items-center p-2 group">
+                    <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center transition-shadow duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-bbva-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H7a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs mt-2 text-bbva-dark font-medium leading-tight">Retiro sin tarjeta</span>
+                </a>
+
+                <!-- Más -->
+                <a href="#" class="flex flex-col items-center p-2 group">
+                    <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center transition-shadow duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-bbva-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                        </svg>
+                    </div>
+                    <span class="text-xs mt-2 text-bbva-dark font-medium leading-tight">Más</span>
+                </a>
+            </section>
+
+            <!-- Título Últimos Movimientos -->
+            <h3 class="text-2xl font-bold text-bbva-dark px-1 mt-4">Últimos movimientos</h3>
+
+            <!-- Lista de Movimientos -->
+            <section class="bg-white rounded-lg shadow-sm border border-gray-200">
+                
+                <p class="text-sm font-medium text-gray-500 px-4 pt-3 pb-2">20 de octubre</p>
+                
+                <div class="space-y-0 divide-y divide-gray-100">
+                    <!-- Movimiento 1 (Retiro) -->
+                    <div class="flex justify-between items-start p-4">
+                        <div>
+                            <!-- Título principal en azul oscuro y negrita -->
+                            <p class="font-bold text-bbva-dark">Retiro sin tarjeta</p>
+                            <!-- Subtítulo en gris claro -->
+                            <p class="text-sm text-gray-500">Movimiento BBVA</p>
+                            <!-- El Botón de Analizar Movimiento LLM ha sido eliminado. -->
+                        </div>
+                        <!-- Monto en rojo, peso MEDIO (font-medium) -->
+                        <span class="text-xl font-medium text-red-600">-$ 4,000.00</span>
+                    </div>
+                    
+                    <!-- Movimiento 2 (Ingreso) -->
+                    <div class="flex justify-between items-start p-4">
+                        <div>
+                            <p class="font-bold text-bbva-dark">Spei recibido azteca</p>
+                            <!-- El Botón de Analizar Movimiento LLM ha sido eliminado. -->
+                        </div>
+                        <!-- Monto en verde, peso MEDIO (font-medium) -->
+                        <span class="text-xl font-medium text-green-600">$ 2,700.00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Para que el scroll se vea completo -->
+            <div class="h-10"></div>
+
+        </main>
+
+    </div>
+
+    <script>
+        // Variables globales para la configuración del LLM (Dejar vacío para el entorno Canvas)
+        const apiKey = ""; 
+        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+
+        // Función para mostrar el modal de la IA
+        function showModal(title, content) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('aiModal').style.display = 'flex';
+        }
+
+        // Función de utilidad para manejar la llamada a la API y la retroalimentación
+        async function callGeminiApi(systemPrompt, userQuery, buttonElement, originalButtonText, isStructured = false) {
+            // Mostrar estado de carga
+            const loadingHtml = '<div class="flex items-center justify-center space-x-2"><svg class="animate-spin h-5 w-5 text-bbva-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Analizando...</span></div>';
+            buttonElement.innerHTML = loadingHtml;
+            buttonElement.disabled = true;
+
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                // Configuración para respuesta estructurada (JSON)
+                if (isStructured) {
+                    payload.generationConfig = {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                category: { type: "STRING", description: "Categoría de la transacción, por ejemplo: Retiro, Ingreso, Comida, Viaje, Ahorro." },
+                                analysis: { type: "STRING", description: "Una breve explicación de un párrafo sobre este movimiento y su implicación." }
+                            }
+                        }
+                    };
+                }
+
+                const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                let text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No se pudo generar la respuesta de la IA.";
+                
+                // Procesar respuesta estructurada si es necesario
+                if (isStructured) {
+                    try {
+                        const data = JSON.parse(text);
+                        return {
+                            category: data.category || 'No Clasificado',
+                            analysis: data.analysis || 'Análisis no disponible.'
+                        };
+                    } catch (e) {
+                        console.error("Error al parsear JSON:", e);
+                        return { category: 'Error de formato', analysis: 'La IA devolvió un formato incorrecto.' };
+                    }
+                }
+
+                return text;
+
+            } catch (error) {
+                console.error("Error al llamar a Gemini API:", error);
+                return "Error: No se pudo conectar con el Asesor de IA. Intenta de nuevo más tarde.";
+            } finally {
+                // Restaurar el botón
+                buttonElement.innerHTML = originalButtonText;
+                buttonElement.disabled = false;
+            }
+        }
+
+
+        // --- FUNCIÓN 1: ANALIZAR MOVIMIENTO (Respuesta Estructurada) ---
+        // Se mantiene la función de JS aunque se quitaron los botones de HTML
+        async function analyzeTransaction(description, amount) {
+            const buttonElement = event.currentTarget;
+            const originalButtonText = buttonElement.innerHTML;
+
+            const systemPrompt = "Eres un Asesor de Finanzas personales experto y amigable. Tu tarea es analizar una transacción bancaria. Responde ÚNICAMENTE con un objeto JSON. La respuesta debe estar en español.";
+            const userQuery = `Analiza el movimiento: Descripción: "${description}", Monto: ${amount.toFixed(2)}. Proporciona una categoría de gasto y un análisis conciso de un párrafo.`;
+
+            const result = await callGeminiApi(systemPrompt, userQuery, buttonElement, originalButtonText, true);
+
+            if (typeof result === 'string') {
+                showModal('Error de Análisis', result);
+            } else {
+                const contentHtml = `
+                    <p class="font-bold text-bbva-blue">Categoría Sugerida:</p>
+                    <p class="text-lg">${result.category}</p>
+                    <p class="font-bold text-bbva-blue mt-4">Análisis del Movimiento:</p>
+                    <p>${result.analysis}</p>
+                `;
+                showModal('✨ Análisis de Movimiento', contentHtml);
+            }
+        }
+        
+        // --- FUNCIÓN 2: ASESOR FINANCIERO (Mantenida por si el usuario la revierte, pero ya no es accesible por un botón) ---
+        async function generateSavingsPlan(availableBalance, totalApartados) {
+            const buttonElement = event.currentTarget;
+            const originalButtonText = buttonElement.innerHTML;
+            
+            // Este código ya no es accesible ya que se eliminó el botón.
+
+            // Nota: Este código se mantiene en JS por si se necesita restaurar el botón,
+            // pero el elemento HTML que lo llama ha sido eliminado.
+            /*
+            const systemPrompt = "Eres un Asesor Financiero proactivo de BBVA. Ofrece un consejo y plan de ahorro motivador en español. Utiliza emojis y un tono positivo y profesional. Tu respuesta debe tener un título motivador y 3 puntos clave.";
+            const userQuery = `Mi saldo disponible es de ${availableBalance.toFixed(2)} pesos y tengo un total apartado de ${totalApartados.toFixed(2)} pesos. ¿Qué consejo de ahorro me puedes dar para mejorar mis finanzas?`;
+
+            const resultText = await callGeminiApi(systemPrompt, userQuery, buttonElement, originalButtonText, false);
+
+            const contentHtml = resultText.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>');
+
+            showModal('✨ Plan de Ahorro Inteligente', `<p>${contentHtml}</p>`);
+            */
+        }
+    </script>
+</body>
+</html>
